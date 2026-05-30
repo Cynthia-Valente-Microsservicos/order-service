@@ -1,4 +1,4 @@
-# order-service
+# Order-Service
 
 Microsserviço responsável pelo gerenciamento de pedidos. Recebe requisições de criação e consulta de pedidos, busca informações de produtos via Feign, persiste os dados no PostgreSQL e publica eventos no Kafka.
 
