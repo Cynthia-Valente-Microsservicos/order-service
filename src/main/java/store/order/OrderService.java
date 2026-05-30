@@ -14,6 +14,9 @@ public class OrderService {
     @Autowired
     private ProductClient productClient;
 
+    @Autowired
+    private OrderProducer orderProducer;
+
     public Order createOrder(OrderIn in, String idAccount) {
         
         List<OrderItem> domainItems = in.items().stream()
@@ -41,8 +44,12 @@ public class OrderService {
 
         OrderModel orderModel = new OrderModel(orderDomain);
         OrderModel savedModel = orderRepository.save(orderModel);
+        Order orderFinal = savedModel.to();
 
-        return savedModel.to();
+        OrderOut responseDto = OrderParser.to(orderFinal);
+        orderProducer.sendOrderEvent(responseDto);
+
+        return orderFinal;
     }
 
     public List<Order> findOrdersByAccount(String idAccount) {
