@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class OrderService {
@@ -58,5 +59,10 @@ public class OrderService {
         return orderModels.stream()
             .map(OrderModel::to)
             .toList();
+    }
+
+    public Order findOrderById(String id) {
+        Optional<OrderModel> orderModel = orderRepository.findById(id);
+        return orderModel.map(OrderModel::to).orElse(null);
     }
 }

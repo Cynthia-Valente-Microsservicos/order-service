@@ -4,7 +4,6 @@ import java.util.List;
 
 public class OrderParser {
 
-    // Converte o domínio para a estrutura detalhada do POST (com itens)
     public static OrderOut to(Order order) {
         if (order == null) return null;
 
@@ -35,5 +34,5 @@ public class OrderParser {
             .total(order.total())
             .build())
         .toList();
-}
+    }
 }
