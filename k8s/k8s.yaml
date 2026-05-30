@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: order
-          image: 730335608828.dkr.ecr.us-east-2.amazonaws.com/order-service:latest
+          image: 730335608828.dkr.ecr.us-east-2.amazonaws.com/order:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
