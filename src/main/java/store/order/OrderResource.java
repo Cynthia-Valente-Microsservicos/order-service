@@ -17,7 +17,7 @@ public class OrderResource implements OrderController {
     @Override
     public ResponseEntity<Void> create(
         @RequestBody OrderIn in, 
-        @RequestHeader("idAccount") String idAccount
+        @RequestHeader("id-account") String idAccount
     ) {
         orderService.createOrder(in, idAccount); 
         
@@ -26,7 +26,7 @@ public class OrderResource implements OrderController {
 
     @Override
     public ResponseEntity<List<OrderSummaryOut>> findAllByAccount(
-        @RequestHeader("idAccount") String idAccount
+        @RequestHeader("id-account") String idAccount
     ) {
         List<Order> orders = orderService.findOrdersByAccount(idAccount);
         List<OrderSummaryOut> summaryOutList = OrderParser.toSummaryList(orders); 
