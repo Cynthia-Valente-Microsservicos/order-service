@@ -22,7 +22,7 @@ pipeline {
                 ]]) {
                     sh "aws ecr get-login-password --region ${env.AWS_REGION} | docker login --username AWS --password-stdin ${env.ECR_REGISTRY}"
                     
-                    sh "docker build -t ${env.ECR_REGISTRY}/${env.SERVICE}:latest -f ../product-service/Dockerfile ."
+                    sh "docker build -t ${env.ECR_REGISTRY}/${env.SERVICE}:latest -f ../order-service/Dockerfile ."
                     
                     sh "docker push ${env.ECR_REGISTRY}/${env.SERVICE}:latest"
                 }
@@ -37,7 +37,7 @@ pipeline {
                 ]]) {
                     sh "aws eks update-kubeconfig --name ${env.CLUSTER_NAME} --region ${env.AWS_REGION}"
                     
-                    sh "kubectl apply -f ../product-service/k8s/k8s.yaml"
+                    sh "kubectl apply -f ../order-service/k8s/k8s.yaml"
                 }
             }
         }
