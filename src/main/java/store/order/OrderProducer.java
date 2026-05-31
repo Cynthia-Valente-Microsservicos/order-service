@@ -18,6 +18,7 @@ public class OrderProducer {
         try {
             String message = objectMapper.writeValueAsString(orderOut);
 
+            // 🌟 Força o ID a virar String para casar com o KafkaTemplate<String, String>
             String orderIdStr = (orderOut.id() != null) ? orderOut.id().toString() : "";
 
             kafkaTemplate.send("order-events", orderIdStr, message)
