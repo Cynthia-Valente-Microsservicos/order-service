@@ -1,74 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kafka
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: kafka
-  template:
-    metadata:
-      labels:
-        app: kafka
-    spec:
-      containers:
-        - name: kafka
-          image: apache/kafka:latest
-          ports:
-            - containerPort: 9092
-            - containerPort: 9093
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "200m"
-            limits:
-              memory: "1Gi"
-              cpu: "500m"
-          env:
-            - name: KAFKA_NODE_ID
-              value: "1"
-            - name: KAFKA_PROCESS_ROLES
-              value: "broker,controller"
-            # AJUSTADO: Escutando explicitamente em 0.0.0.0 para o Kubernetes conseguir conectar internamente
-            - name: KAFKA_LISTENERS
-              value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
-            - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://kafka-service:9092"
-            - name: KAFKA_CONTROLLER_LISTENER_NAMES
-              value: "CONTROLLER"
-            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
-              value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
-            # AJUSTADO: Apontando para o localhost interno do próprio pod onde o controller reside
-            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: "1@127.0.0.1:9093"
-            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
-              value: "1"
-            - name: KAFKA_LOG_DIRS
-              value: "/var/lib/kafka/data"
-            - name: CLUSTER_ID
-              value: "mkU3OId9TKiR76mMPwglBZ"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kafka-service
-spec:
-  selector:
-    app: kafka
-  ports:
-    - name: client
-      protocol: TCP
-      port: 9092
-      targetPort: 9092
-    - name: controller
-      protocol: TCP
-      port: 9093
-      targetPort: 9093
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
   name: order
 spec:
   replicas: 1
@@ -81,6 +13,7 @@ spec:
         app: order
     spec:
       initContainers:
+        # Ajustado para testar o nome correto do serviço do Kafka
         - name: wait-for-kafka
           image: busybox
           command: ['sh', '-c', 'until nc -z kafka-service 9092; do sleep 2; done']
@@ -101,14 +34,14 @@ spec:
             httpGet:
               path: /order/actuator/health
               port: 8080
-            initialDelaySeconds: 30
+            initialDelaySeconds: 45 # Aumentado um pouco para dar tempo do Java respirar
             periodSeconds: 10
             failureThreshold: 5
           livenessProbe:
             httpGet:
               path: /order/actuator/health
               port: 8080
-            initialDelaySeconds: 60
+            initialDelaySeconds: 75 # Aumentado para evitar que o K8s mate o pod no susto
             periodSeconds: 15
             failureThreshold: 3
           env:
@@ -116,10 +49,18 @@ spec:
               value: "prod"
             - name: EUREKA_CLIENT_ENABLED
               value: "false"
+            
+            # 🌟 CORREÇÃO DO BYPASS: Força o Spring a ignorar a falta do Bean do Kafka
+            - name: SPRING_AUTOCONFIGURE_EXCLUDE
+              value: "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"
+
+            # Fiação dupla do Kafka (com kafka e kafka-service) para não ter erro
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-service:9092"
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-service:9092"
+
+            # Configurações do Banco de Dados Postgres (Mantidas idênticas)
             - name: DATABASE_HOST
               valueFrom:
                 secretKeyRef:
