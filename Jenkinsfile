@@ -38,6 +38,7 @@ pipeline {
                     sh "aws eks update-kubeconfig --name ${env.CLUSTER_NAME} --region ${env.AWS_REGION}"
                     
                     sh "kubectl apply -f ../order-service/k8s/k8s.yaml"
+                    sh "kubectl apply -f ../order-service/k8s/hpa.yaml"
                 }
             }
         }
