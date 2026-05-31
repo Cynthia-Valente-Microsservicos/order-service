@@ -1,15 +1,15 @@
 # Order-Service
 
-Microsserviço responsável pelo gerenciamento de pedidos. Recebe requisições de criação e consulta de pedidos, busca informações de produtos via Feign, persiste os dados no PostgreSQL e publica eventos no Kafka.
+Microsserviço responsável pelo gerenciamento de pedidos. Recebe requisições de criação e consulta de pedidos, busca informações de produtos via Feign, persiste os dados no PostgreSQL e publica eventos no Kafka para processamento assíncrono.
 
 ## Tecnologias
 
 - Java 25
 - Spring Boot 4.0.6
-- Spring Cloud 2025.1.1 (OpenFeign, Eureka Client)
+- Spring Cloud 2025.1.1 (OpenFeign)
 - PostgreSQL + Spring Data JPA + Flyway
 - Apache Kafka
-- Docker
+- Docker / Kubernetes
 
 ## Endpoints
 
@@ -22,7 +22,7 @@ Microsserviço responsável pelo gerenciamento de pedidos. Recebe requisições 
 
 ### POST `/orders`
 
-Cria um pedido com os itens informados. Para cada item, busca o produto no `product-service` para calcular o preço.
+Cria um pedido com os itens informados. Para cada item, busca o produto no `product-service` para calcular o preço. Após persistir, publica o pedido completo no tópico `order-events`.
 
 **Request body:**
 ```json
@@ -59,13 +59,23 @@ Schema PostgreSQL: `orders`
 | `orders.orders` | Pedidos (id, idAccount, date, total) |
 | `orders.order_items` | Itens de cada pedido (id, idProduct, quantity, total) |
 
+## Kafka — Publicação de eventos
+
+O `OrderProducer` publica o pedido serializado como JSON no tópico `order-events` após cada criação bem-sucedida. A chave da mensagem é o `id` do pedido, garantindo que todos os eventos de um mesmo pedido caiam na mesma partição.
+
+```
+order-service ──(order-events, key=orderId)──► product-service
+                                                └── reduceStock()
+```
+
+O tópico é criado automaticamente com **3 partições** e fator de replicação 1.
+
 ## Comunicação entre serviços
 
 | Tipo | Serviço | Detalhe |
 |------|---------|---------|
 | Feign (síncrono) | `product` | `GET http://product:8080/products/{id}` — busca preço do produto |
-| Kafka (assíncrono) | — | Publica em `order-events` (3 partições) após criação do pedido |
-| Eureka | `eureka-container:8761` | Registro para service discovery |
+| Kafka (assíncrono) | `order-events` | Publica pedido completo após criação (3 partições) |
 
 ## Variáveis de ambiente
 
@@ -97,10 +107,17 @@ java -jar target/order-service-1.0.0.jar
 
 O serviço sobe na porta `8080`.
 
+## Kubernetes
+
+O manifesto `k8s/k8s.yaml` cria:
+- `Deployment` `order` com 1 réplica (imagem ECR)
+- `Service` `order` do tipo `LoadBalancer`
+
+O initContainer `wait-for-kafka` aguarda o broker Kafka (`kafka-service:9092`) ficar disponível antes de iniciar a aplicação. Credenciais do banco são lidas do secret `db-credentials`.
+
 ## Dependências externas
 
 - **`store:order:1.0.0`** — biblioteca de contratos (DTOs e Feign client)
 - **`product-service`** — consulta de preços de produtos
 - **PostgreSQL** — persistência de pedidos
 - **Kafka** — publicação de eventos de pedido
-- **Eureka Server** — service discovery
