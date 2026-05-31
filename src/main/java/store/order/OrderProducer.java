@@ -17,22 +17,20 @@ public class OrderProducer {
     public void sendOrderEvent(OrderOut orderOut) {
         try {
             String message = objectMapper.writeValueAsString(orderOut);
+            String key = (orderOut.id() != null) ? orderOut.id() : "";
 
-            // 🌟 Força o ID a virar String para casar com o KafkaTemplate<String, String>
-            String orderIdStr = (orderOut.id() != null) ? orderOut.id().toString() : "";
-
-            kafkaTemplate.send("order-events", orderIdStr, message)
+            kafkaTemplate.send("order-events", key, message)
                 .whenComplete((result, ex) -> {
                     if (ex != null) {
-                        System.err.println("[KAFKA] Falha ao entregar evento " + orderIdStr + ": " + ex.getMessage());
+                        System.err.println("[KAFKA] Falha ao entregar evento " + key + ": " + ex.getMessage());
                     } else {
-                        System.out.println("[KAFKA] Evento entregue: " + orderIdStr
+                        System.out.println("[KAFKA] Evento entregue: " + key
                             + " | partition=" + result.getRecordMetadata().partition()
                             + " | offset=" + result.getRecordMetadata().offset());
                     }
                 });
         } catch (Exception e) {
-            System.err.println("[KAFKA] Erro ao serializar o pedido: " + e.getMessage());
+            System.err.println("[KAFKA] Erro ao serializar pedido: " + e.getMessage());
         }
     }
 }

@@ -47,8 +47,7 @@ public class OrderService {
         OrderModel savedModel = orderRepository.save(orderModel);
         Order orderFinal = savedModel.to();
 
-        OrderOut responseDto = OrderParser.to(orderFinal);
-        orderProducer.sendOrderEvent(responseDto);
+        orderProducer.sendOrderEvent(OrderParser.to(orderFinal));
 
         return orderFinal;
     }

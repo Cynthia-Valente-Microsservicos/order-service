@@ -13,54 +13,34 @@ spec:
         app: order
     spec:
       initContainers:
-        # Ajustado para testar o nome correto do serviço do Kafka
         - name: wait-for-kafka
           image: busybox
-          command: ['sh', '-c', 'until nc -z kafka-service 9092; do sleep 2; done']
+          command: ['sh', '-c', 'until nc -z kafka-service 9092; do echo "aguardando kafka..."; sleep 3; done']
       containers:
         - name: order
           image: 730335608828.dkr.ecr.us-east-2.amazonaws.com/order:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          
+          # 🌟 Devolvendo recursos pro Java trabalhar em paz
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "200m"
-            limits:
               memory: "512Mi"
+              cpu: "300m"
+            limits:
+              memory: "1Gi"
               cpu: "1000m"
-          readinessProbe:
-            httpGet:
-              path: /order/actuator/health
-              port: 8080
-            initialDelaySeconds: 45 # Aumentado um pouco para dar tempo do Java respirar
-            periodSeconds: 10
-            failureThreshold: 5
-          livenessProbe:
-            httpGet:
-              path: /order/actuator/health
-              port: 8080
-            initialDelaySeconds: 75 # Aumentado para evitar que o K8s mate o pod no susto
-            periodSeconds: 15
-            failureThreshold: 3
+
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
             - name: EUREKA_CLIENT_ENABLED
               value: "false"
-            
-            # 🌟 CORREÇÃO DO BYPASS: Força o Spring a ignorar a falta do Bean do Kafka
-            - name: SPRING_AUTOCONFIGURE_EXCLUDE
-              value: "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"
 
-            # Fiação dupla do Kafka (com kafka e kafka-service) para não ter erro
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-service:9092"
-            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
-              value: "kafka-service:9092"
 
-            # Configurações do Banco de Dados Postgres (Mantidas idênticas)
             - name: DATABASE_HOST
               valueFrom:
                 secretKeyRef:
